@@ -3,6 +3,10 @@
 Writes to stdout by default so the output can be piped, diffed or
 redirected into a GitOps repo without the tool deciding where things
 live. --out exists for the pipeline case where the path is fixed.
+
+Exit codes: 0 manifest written, 3 nothing promoted, 4 registry unreachable.
+1 and 2 are left to Python (an uncaught exception) and argparse (a usage
+error), so no outcome shares an exit code with a crash.
 """
 from __future__ import annotations
 
@@ -11,7 +15,10 @@ import sys
 from pathlib import Path
 
 from .render import build_manifest, render
-from .resolve import PromotionError, resolve
+from .resolve import PromotionError, RegistryUnavailable, resolve
+
+EXIT_NOTHING_PROMOTED = 3
+EXIT_REGISTRY_UNAVAILABLE = 4
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -19,6 +26,8 @@ def main(argv: list[str] | None = None) -> int:
         prog="model-promotion-bridge",
         description="Render the VllmService manifest for whatever the registry "
                     "has promoted under an alias.",
+        epilog="exit codes: 0 manifest written, 3 nothing promoted, "
+               "4 registry unreachable",
     )
     p.add_argument("--tracking-uri", required=True,
                    help="MLflow tracking URI, e.g. sqlite:///mlflow.db or "
@@ -47,7 +56,10 @@ def main(argv: list[str] | None = None) -> int:
         promoted = resolve(a.model, a.alias, a.tracking_uri, a.revision_tag)
     except PromotionError as exc:
         print(f"error: {exc}", file=sys.stderr)
-        return 1
+        return EXIT_NOTHING_PROMOTED
+    except RegistryUnavailable as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_REGISTRY_UNAVAILABLE
 
     manifest = build_manifest(
         promoted,

@@ -16,11 +16,19 @@ from .resolve import PromotedModel
 
 # The operator has no first-class field for the model revision: VllmServiceSpec
 # carries `model: String` and nothing beside it. It does have extraArgs, which
-# passes arguments straight to `vllm serve`, and vLLM accepts --revision. So the
-# pin travels as an extra arg, and the annotations below record where the value
-# came from — because an extra arg alone tells a reader what was served but not
-# who decided it.
+# passes arguments straight to `vllm serve`, and vLLM accepts --revision
+# (vllm/engine/arg_utils.py:950 at vLLM 84bcbc6). The tokenizer inherits that
+# revision unless --tokenizer-revision is given (vllm/config/model.py:590-591).
+# So the pin travels as an extra arg, and the annotations below record where the
+# value came from — because an extra arg alone tells a reader what was served
+# but not who decided it.
 PROVENANCE_PREFIX = "model.michelecampi.dev"
+
+# Flags that would compete with the pin: a second --revision makes the
+# effective pin depend on argument order, and a --tokenizer-revision serves the
+# pinned weights with a tokenizer from elsewhere. Matched as a separate token
+# and in the one-token `--flag=value` form.
+_PIN_FLAGS = ("--revision", "--tokenizer-revision")
 
 
 def build_manifest(
@@ -40,12 +48,15 @@ def build_manifest(
     does not know vLLM's flags.
     """
     args = list(extra_args or [])
-    if "--revision" in args:
-        raise ValueError(
-            "extra_args already carries --revision; the bridge owns that flag "
-            "and a second one would make which pin takes effect depend on "
-            "argument order"
-        )
+    for arg in args:
+        flag = arg.split("=", 1)[0]
+        if flag in _PIN_FLAGS:
+            raise ValueError(
+                f"extra_args already carries {flag}; the bridge owns the "
+                f"revision pin, and a competing flag would either make which "
+                f"pin takes effect depend on argument order or split the "
+                f"tokenizer from the weights"
+            )
     args += ["--revision", promoted.revision]
 
     spec: dict[str, Any] = {
