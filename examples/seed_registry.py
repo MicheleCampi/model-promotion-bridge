@@ -9,7 +9,9 @@ matters: the manifest follows the alias, not the newest version.
 The revisions are real commit SHAs from the model repo. The first is the
 one a GPU session on 2026-07-04 actually served — recorded by hand in that
 session's provenance file, because at the time there was nowhere else to
-put it.
+put it. The second is an earlier commit of the same repo, registered after
+the first and left unpromoted: the order of registration does not decide
+what is served, the alias does.
 """
 import argparse
 
@@ -19,7 +21,7 @@ from mlflow import MlflowClient
 MODEL = "qwen2.5-7b-instruct"
 SOURCE = "hf://Qwen/Qwen2.5-7B-Instruct"
 SERVED_2026_07_04 = "a09a35458c702b33eeacc393d103063234e8bc28"
-NEWER = "f4b1c3a9d2e5077bb8c4419fa3b6d0e2c7185a94"
+EARLIER = "bb46c15ee4bb56c5b63245ef50fd7637234d6f75"
 
 
 def main() -> int:
@@ -41,15 +43,15 @@ def main() -> int:
         "note": "revision served in the 3xA10 fleet session of 2026-07-04",
     })
     v2 = c.create_model_version(MODEL, SOURCE, tags={
-        "hf_revision": NEWER,
+        "hf_revision": EARLIER,
         "engine": "vllm",
-        "note": "newer upstream revision, registered but not promoted",
+        "note": "earlier upstream revision, registered after v1, not promoted",
     })
     c.set_registered_model_alias(MODEL, "production", v1.version)
 
     print(f"registered {MODEL}: v{v1.version} (promoted) and v{v2.version}")
     print(f"  production -> v{v1.version}, revision {SERVED_2026_07_04[:12]}")
-    print(f"  newest     -> v{v2.version}, revision {NEWER[:12]} (not served)")
+    print(f"  newest     -> v{v2.version}, revision {EARLIER[:12]} (registered last, not served)")
     return 0
 
 
