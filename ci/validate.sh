@@ -21,20 +21,15 @@ OPERATOR_RELEASES="v0.2.1 v0.3.0"
 SERVED_REVISION=a09a35458c702b33eeacc393d103063234e8bc28
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 fail=0
-pass() { echo "PASS $1"; }
-check() { local n=$1; shift; if "$@" >"$W/$n.log" 2>&1; then pass "$n"; else echo "FAIL $n"; tail -20 "$W/$n.log"; fail=1; fi; }
-expect_reject() {
-  local n=$1 reason=$2; shift 2
-  if "$@" >"$W/$n.log" 2>&1; then echo "FAIL $n: accepted, should have been rejected"; fail=1
-  elif grep -q -E "$reason" "$W/$n.log"; then echo "PASS $n: rejected ($(grep -m1 -o -E ".{0,40}$reason.{0,40}" "$W/$n.log"))"
-  else echo "FAIL $n: rejected for another reason"; tail -5 "$W/$n.log"; fail=1; fi
-}
-same() { if [ "$2" = "$3" ]; then pass "$1 ($2)"; else echo "FAIL $1: $2 != $3"; fail=1; fi; }
-exit_code() {
-  local n=$1 want=$2; shift 2
-  "$@" >"$W/$n.log" 2>&1; local got=$?
-  if [ "$got" = "$want" ]; then pass "$n (exit $got)"; else echo "FAIL $n: exit $got, want $want"; tail -5 "$W/$n.log"; fail=1; fi
-}
+. ci/platform-ci.env
+# The helpers (pass, check, expect_reject, same, exit_code) come from
+# inference-platform-ci, installed by ci/install-tools.sh. Without them every
+# check would be undefined and fail would stay 0, so a missing lib.sh stops
+# the run here instead of letting it report success.
+. "$CI_BIN/platform-ci/lib.sh" || { echo "no $CI_BIN/platform-ci/lib.sh: run bash ci/install-tools.sh first" >&2; exit 1; }
+
+echo "== shared CI files at the commit pinned in ci/platform-ci.env"
+same platform-ci-commit "$(git -C "$CI_BIN/platform-ci" rev-parse HEAD)" "$PLATFORM_CI_COMMIT"
 
 echo "== tests"
 check pytest "$PY" -m pytest tests -q -p no:cacheprovider

@@ -141,3 +141,8 @@ The same script runs on every push to `main` and every pull request:
 - a self-test: an unknown field and a revision that is not a string must each
   be rejected by both schemas, and a planted token by gitleaks, each for the
   reason named. A check that cannot fail proves nothing.
+
+The tools, their installer and the helpers of `ci/validate.sh` come from
+[inference-platform-ci](https://github.com/MicheleCampi/inference-platform-ci),
+shared with the other repositories of the platform and fetched at the tag and
+commit pinned in `ci/platform-ci.env`: a moved tag fails the run.
