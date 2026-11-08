@@ -6,3 +6,4 @@
 # name                  url                                                                                                                                  sha256
 crd-operator-v0.2.1     https://raw.githubusercontent.com/MicheleCampi/vllm-coldstart-operator/bc101119f4e26ecb51dd550a38a594036cda8f0f/chart/crds/crd.yaml   0c747504419f53cde50d3ec2ab4060595c13bc8799b377e64ae39c83d74b3cc3
 crd-operator-v0.3.0     https://raw.githubusercontent.com/MicheleCampi/vllm-coldstart-operator/a20121b973c67985cf0875fe4aef93c4c6589f76/chart/crds/crd.yaml   19fd378ccad7f004bed87dd87b12c24787870437ab0ee7fc9171e29d63f89a3c
+crd-operator-v0.9.0     https://raw.githubusercontent.com/MicheleCampi/vllm-coldstart-operator/64e243afe4da6050dbbd609ad11fd8621784a13b/chart/crds/crd.yaml   763e5f502303803afa6181397c0b6feefda7b1d6e73c0031511304730c1c1edb

@@ -132,9 +132,10 @@ The same script runs on every push to `main` and every pull request:
   promoted revision, and it is validated with `kubeconform -strict` against the
   `VllmService` CRD of
   [vllm-coldstart-operator](https://github.com/MicheleCampi/vllm-coldstart-operator)
-  at two releases — v0.2.1, the one
+  at three releases — v0.9.0, the latest and the one
   [gke-llm-inference-platform](https://github.com/MicheleCampi/gke-llm-inference-platform)
-  deploys, and v0.3.0 — each fetched at a fixed commit and checked by SHA-256.
+  deploys, and the earlier v0.2.1 and v0.3.0 — each fetched at a fixed commit
+  and checked by SHA-256.
   Field names in a generator are the kind of thing that looks right and is not;
 - the CLI's exit codes, as a real process;
 - gitleaks on the full history and actionlint on the workflow;
