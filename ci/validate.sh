@@ -16,8 +16,9 @@ CI_BIN=${CI_BIN:-$ROOT/.ci-bin}
 export PATH="$CI_BIN:$PATH"
 export PYTHONDONTWRITEBYTECODE=1
 PY="$CI_BIN/venv/bin/python"
-# v0.2.1 is the release gke-llm-inference-platform deploys; v0.3.0 the latest.
-OPERATOR_RELEASES="v0.2.1 v0.3.0"
+# v0.9.0 is the latest release and the one gke-llm-inference-platform deploys
+# (argocd/apps/operator.yaml); v0.2.1 and v0.3.0 are earlier releases.
+OPERATOR_RELEASES="v0.2.1 v0.3.0 v0.9.0"
 SERVED_REVISION=a09a35458c702b33eeacc393d103063234e8bc28
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 fail=0
