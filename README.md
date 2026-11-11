@@ -3,7 +3,8 @@
 [![ci](https://github.com/MicheleCampi/model-promotion-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/MicheleCampi/model-promotion-bridge/actions/workflows/ci.yml)
 
 Reads what a model registry has promoted and emits the Kubernetes manifest that
-serves exactly that revision. MLflow in, `VllmService` out, nothing in between.
+serves exactly that revision. MLflow in, `VllmService` or `FleetService` out (`--kind fleet`), nothing in
+between.
 
 ## The gap this closes
 

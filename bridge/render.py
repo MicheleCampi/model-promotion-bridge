@@ -30,6 +30,9 @@ PROVENANCE_PREFIX = "model.michelecampi.dev"
 # and in the one-token `--flag=value` form.
 _PIN_FLAGS = ("--revision", "--tokenizer-revision")
 
+# The two kinds an AppProject of a team admits (gke argocd/apps/team-*.yaml).
+KINDS = ("VllmService", "FleetService")
+
 
 def build_manifest(
     promoted: PromotedModel,
@@ -39,6 +42,7 @@ def build_manifest(
     gpu: int = 1,
     image: Optional[str] = None,
     extra_args: Optional[list[str]] = None,
+    kind: str = "VllmService",
 ) -> dict[str, Any]:
     """Build a VllmService that serves exactly the promoted revision.
 
@@ -59,18 +63,23 @@ def build_manifest(
             )
     args += ["--revision", promoted.revision]
 
-    spec: dict[str, Any] = {
-        "model": promoted.hf_repo,
-        "replicas": replicas,
-        "gpu": gpu,
-        "extraArgs": args,
-    }
+    if kind not in KINDS:
+        raise ValueError(f"kind must be one of {KINDS}, not {kind!r}")
+    pod: dict[str, Any] = {"gpu": gpu, "extraArgs": args}
     if image:
-        spec["image"] = image
+        pod["image"] = image
+    # FleetServiceSpec (operator v0.9.0) requires model, replicas and
+    # template; what each pod runs lives in template. VllmServiceSpec keeps
+    # the same fields at the top level.
+    spec: dict[str, Any] = {"model": promoted.hf_repo, "replicas": replicas}
+    if kind == "FleetService":
+        spec["template"] = pod
+    else:
+        spec.update(pod)
 
     return {
         "apiVersion": "inference.michelecampi.dev/v1alpha1",
-        "kind": "VllmService",
+        "kind": kind,
         "metadata": {
             "name": service_name,
             "namespace": namespace,
