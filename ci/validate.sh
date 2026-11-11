@@ -62,6 +62,15 @@ for r in $OPERATOR_RELEASES; do
     -schema-location "$W/schemas/$r/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" "$W/qwen-prod.yaml"
 done
 
+echo "== FleetService manifest against the operator release gke deploys (v0.9.0)"
+check render-fleet "$PY" -m bridge.cli --tracking-uri "$REG" --model qwen2.5-7b-instruct \
+  --service-name qwen-fleet --kind fleet --out "$W/qwen-fleet.yaml"
+same fleet-served-revision "$("$PY" -c 'import sys, yaml; a = yaml.safe_load(open(sys.argv[1]))["spec"]["template"]["extraArgs"]; print(a[a.index("--revision") + 1])' "$W/qwen-fleet.yaml")" "$SERVED_REVISION"
+mkdir -p "$W/schemas/fleet"
+check schema-fleet-operator-v0.9.0 sh -c "'$PY' '$W/served.py' fleetservices.inference.michelecampi.dev < '$CI_BIN/crd-operator-v0.9.0.yaml' > '$W/crd-fleet.yaml' && cd '$W/schemas/fleet' && '$PY' '$CI_BIN/openapi2jsonschema.py' '$W/crd-fleet.yaml'"
+check manifest-fleet-operator-v0.9.0 kubeconform -strict -summary \
+  -schema-location "$W/schemas/fleet/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" "$W/qwen-fleet.yaml"
+
 echo "== CLI exit codes, as a real process"
 CLI=("$PY" -m bridge.cli --model qwen2.5-7b-instruct --service-name x)
 exit_code cli-usage-error 2 "$PY" -m bridge.cli
@@ -85,6 +94,10 @@ for r in $OPERATOR_RELEASES; do
   expect_reject "neg-unknown-field-$r" "additional properties 'gpuz' not allowed" "${KC[@]}" "$W/neg-unknown.yaml"
   expect_reject "neg-revision-not-a-string-$r" "extraArgs/1': got number, want string" "${KC[@]}" "$W/neg-number.yaml"
 done
+# A FleetService keeps gpu inside template: the same field one level up must be rejected.
+"$PY" -c 'import sys, yaml; d = yaml.safe_load(open(sys.argv[1])); d["spec"]["gpu"] = d["spec"]["template"].pop("gpu"); yaml.safe_dump(d, open(sys.argv[2], "w"))' "$W/qwen-fleet.yaml" "$W/neg-fleet-gpu.yaml"
+expect_reject neg-fleet-gpu-outside-template-v0.9.0 "additional properties 'gpu' not allowed" \
+  kubeconform -strict -schema-location "$W/schemas/fleet/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" "$W/neg-fleet-gpu.yaml"
 mkdir -p "$W/leak" && printf 'token = "ghp_%s"\n' "$(head -c 300 /dev/urandom | tr -dc 'A-Za-z0-9' | head -c 36)" > "$W/leak/config.txt"
 expect_reject neg-secret "leaks found: 1" gitleaks dir --redact --no-banner "$W/leak"
 

@@ -194,3 +194,22 @@ def test_refuses_a_tokenizer_revision_that_would_split_the_pin():
     p = PromotedModel("m", "1", "hf://X/Y", REV, "production")
     with pytest.raises(ValueError, match="already carries --tokenizer-revision"):
         build_manifest(p, "svc", extra_args=["--tokenizer-revision", "main"])
+
+
+def test_a_fleet_carries_the_pin_in_its_template():
+    """A FleetService keeps the same pin, inside template where the pods read it."""
+    p = PromotedModel("m", "3", "hf://Qwen/Qwen2.5-7B-Instruct", REV, "production")
+    m = build_manifest(p, "svc", gpu=1, image="img", kind="FleetService")
+    assert m["kind"] == "FleetService"
+    assert set(m["spec"]) == {"model", "replicas", "template"}
+    t = m["spec"]["template"]
+    assert t["extraArgs"][t["extraArgs"].index("--revision") + 1] == REV
+    assert (t["gpu"], t["image"]) == (1, "img")
+    assert m["metadata"]["annotations"]["model.michelecampi.dev/revision"] == REV
+
+
+def test_refuses_an_unknown_kind():
+    p = PromotedModel("m", "1", "hf://X/Y", REV, "production")
+    with pytest.raises(ValueError, match="kind must be one of"):
+        build_manifest(p, "svc", kind="Deployment")
+
