@@ -42,6 +42,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--namespace", default="default")
     p.add_argument("--replicas", type=int, default=1)
     p.add_argument("--gpu", type=int, default=1)
+    p.add_argument("--cpu", default=None, help="CPU per pod, e.g. 3")
+    p.add_argument("--memory", default=None, help="memory per pod, e.g. 11Gi")
     p.add_argument("--image", default=None,
                    help="container image; pin a digest for a reproducible "
                         "fleet. Left unset the operator applies its own "
@@ -70,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
         replicas=a.replicas,
         gpu=a.gpu,
         image=a.image,
+        cpu=a.cpu,
+        memory=a.memory,
         kind={"vllm": "VllmService", "fleet": "FleetService"}[a.kind],
     )
     header = (

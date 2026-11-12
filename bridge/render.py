@@ -41,6 +41,8 @@ def build_manifest(
     replicas: int = 1,
     gpu: int = 1,
     image: Optional[str] = None,
+    cpu: Optional[str] = None,
+    memory: Optional[str] = None,
     extra_args: Optional[list[str]] = None,
     kind: str = "VllmService",
 ) -> dict[str, Any]:
@@ -68,6 +70,14 @@ def build_manifest(
     pod: dict[str, Any] = {"gpu": gpu, "extraArgs": args}
     if image:
         pod["image"] = image
+    # Without these the pod takes the namespace LimitRange defaults; in a
+    # tenant namespace of the gke repo that is a 512Mi memory limit, which a
+    # vLLM process exceeds while loading. Emitted only when given, so a
+    # promotion rendered without them is an unchanged manifest.
+    if cpu:
+        pod["cpu"] = cpu
+    if memory:
+        pod["memory"] = memory
     # FleetServiceSpec (operator v0.9.0) requires model, replicas and
     # template; what each pod runs lives in template. VllmServiceSpec keeps
     # the same fields at the top level.
