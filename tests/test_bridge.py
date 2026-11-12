@@ -250,14 +250,13 @@ def test_node_selector_is_refused_for_a_vllmservice():
 
 
 # D-0145: objective, budget and provisionOnEmpty (operator v0.10.0)
-import dataclasses as _dc
 import pytest as _pytest
-from bridge import render as _r
+import importlib as _il
+_r = _il.import_module("bridge.render")
 
 
 def _promoted():
-    f = {x.name: "x" for x in _dc.fields(_r.PromotedModel)}
-    return _r.PromotedModel(**f)
+    return PromotedModel("m", "1", "hf://X/Y", REV, "production")
 
 
 def test_objective_and_budget_on_both_kinds():
