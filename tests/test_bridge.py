@@ -213,3 +213,21 @@ def test_refuses_an_unknown_kind():
     with pytest.raises(ValueError, match="kind must be one of"):
         build_manifest(p, "svc", kind="Deployment")
 
+
+
+def test_cpu_and_memory_land_where_each_kind_reads_them():
+    """A FleetService gets them in template; a VllmService at the top level."""
+    p = PromotedModel("m", "3", "hf://Qwen/Qwen2.5-0.5B-Instruct", REV, "production")
+    f = build_manifest(p, "svc", cpu="3", memory="11Gi", kind="FleetService")
+    assert (f["spec"]["template"]["cpu"], f["spec"]["template"]["memory"]) == ("3", "11Gi")
+    v = build_manifest(p, "svc", cpu="3", memory="11Gi")
+    assert (v["spec"]["cpu"], v["spec"]["memory"]) == ("3", "11Gi")
+
+
+def test_cpu_and_memory_are_absent_unless_given():
+    """Without them the manifest is the one the bridge rendered before."""
+    p = PromotedModel("m", "3", "hf://Qwen/Qwen2.5-0.5B-Instruct", REV, "production")
+    f = build_manifest(p, "svc", kind="FleetService")
+    assert not {"cpu", "memory"} & set(f["spec"]["template"])
+    v = build_manifest(p, "svc")
+    assert not {"cpu", "memory"} & set(v["spec"])
