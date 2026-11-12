@@ -45,6 +45,7 @@ def build_manifest(
     memory: Optional[str] = None,
     extra_args: Optional[list[str]] = None,
     kind: str = "VllmService",
+    node_selector: Optional[dict[str, str]] = None,
 ) -> dict[str, Any]:
     """Build a VllmService that serves exactly the promoted revision.
 
@@ -67,6 +68,8 @@ def build_manifest(
 
     if kind not in KINDS:
         raise ValueError(f"kind must be one of {KINDS}, not {kind!r}")
+    if node_selector and kind != "FleetService":
+        raise ValueError("node_selector is read only by FleetService (spec.nodePool.selector)")
     pod: dict[str, Any] = {"gpu": gpu, "extraArgs": args}
     if image:
         pod["image"] = image
@@ -84,6 +87,8 @@ def build_manifest(
     spec: dict[str, Any] = {"model": promoted.hf_repo, "replicas": replicas}
     if kind == "FleetService":
         spec["template"] = pod
+        if node_selector:
+            spec["nodePool"] = {"selector": dict(node_selector)}
     else:
         spec.update(pod)
 

@@ -231,3 +231,19 @@ def test_cpu_and_memory_are_absent_unless_given():
     assert not {"cpu", "memory"} & set(f["spec"]["template"])
     v = build_manifest(p, "svc")
     assert not {"cpu", "memory"} & set(v["spec"])
+
+
+def test_node_selector_lands_in_fleet_node_pool():
+    """A fleet gets it as spec.nodePool.selector: the nodes it may place onto."""
+    p = PromotedModel("m", "3", "hf://Qwen/Qwen2.5-0.5B-Instruct", REV, "production")
+    f = build_manifest(p, "svc", kind="FleetService", node_selector={"cloud.google.com/gke-nodepool": "gpu-pool"})
+    assert f["spec"]["nodePool"] == {"selector": {"cloud.google.com/gke-nodepool": "gpu-pool"}}
+    assert "nodePool" not in build_manifest(p, "svc", kind="FleetService")["spec"]
+
+
+def test_node_selector_is_refused_for_a_vllmservice():
+    """VllmService does not read it: an error, not a silently ignored flag."""
+    import pytest
+    p = PromotedModel("m", "3", "hf://Qwen/Qwen2.5-0.5B-Instruct", REV, "production")
+    with pytest.raises(ValueError):
+        build_manifest(p, "svc", node_selector={"a": "b"})

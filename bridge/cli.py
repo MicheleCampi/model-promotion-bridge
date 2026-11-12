@@ -43,6 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--replicas", type=int, default=1)
     p.add_argument("--gpu", type=int, default=1)
     p.add_argument("--cpu", default=None, help="CPU per pod, e.g. 3")
+    p.add_argument("--node-selector", action="append", metavar="KEY=VALUE", help="FleetService only: a label a node must carry (spec.nodePool.selector); repeatable")
     p.add_argument("--memory", default=None, help="memory per pod, e.g. 11Gi")
     p.add_argument("--image", default=None,
                    help="container image; pin a digest for a reproducible "
@@ -73,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
         gpu=a.gpu,
         image=a.image,
         cpu=a.cpu,
-        memory=a.memory,
+        memory=a.memory, node_selector=dict(x.split('=', 1) for x in a.node_selector or []),
         kind={"vllm": "VllmService", "fleet": "FleetService"}[a.kind],
     )
     header = (
