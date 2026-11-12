@@ -46,6 +46,10 @@ def build_manifest(
     extra_args: Optional[list[str]] = None,
     kind: str = "VllmService",
     node_selector: Optional[dict[str, str]] = None,
+    ttft_seconds: Optional[float] = None,
+    percentile: Optional[float] = None,
+    budget_eur: Optional[float] = None,
+    provision_on_empty: bool = False,
 ) -> dict[str, Any]:
     """Build a VllmService that serves exactly the promoted revision.
 
@@ -70,6 +74,10 @@ def build_manifest(
         raise ValueError(f"kind must be one of {KINDS}, not {kind!r}")
     if node_selector and kind != "FleetService":
         raise ValueError("node_selector is read only by FleetService (spec.nodePool.selector)")
+    if provision_on_empty and kind != "FleetService":
+        raise ValueError("provision_on_empty is read only by FleetService (spec.nodePool.provisionOnEmpty)")
+    if percentile is not None and ttft_seconds is None:
+        raise ValueError("percentile without ttft_seconds is not an objective")
     pod: dict[str, Any] = {"gpu": gpu, "extraArgs": args}
     if image:
         pod["image"] = image
@@ -87,10 +95,27 @@ def build_manifest(
     spec: dict[str, Any] = {"model": promoted.hf_repo, "replicas": replicas}
     if kind == "FleetService":
         spec["template"] = pod
+        pool: dict[str, Any] = {}
         if node_selector:
-            spec["nodePool"] = {"selector": dict(node_selector)}
+            pool["selector"] = dict(node_selector)
+        # operator v0.10.0: with no candidate node, a placeholder Pod asks the
+        # cluster autoscaler for one (D-0145).
+        if provision_on_empty:
+            pool["provisionOnEmpty"] = True
+        if pool:
+            spec["nodePool"] = pool
     else:
         spec.update(pod)
+    # The team's declaration (ADR-0013, ADR-0025). Both kinds carry it from
+    # operator v0.10.0; a fleet copies it to every replica. Emitted only when
+    # given; percentile defaults to the platform's 95.
+    if ttft_seconds is not None:
+        spec["objective"] = {
+            "ttftSeconds": ttft_seconds,
+            "percentile": 95.0 if percentile is None else percentile,
+        }
+    if budget_eur is not None:
+        spec["budget"] = {"eurPerMonth": budget_eur}
 
     return {
         "apiVersion": "inference.michelecampi.dev/v1alpha1",

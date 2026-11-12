@@ -247,3 +247,38 @@ def test_node_selector_is_refused_for_a_vllmservice():
     p = PromotedModel("m", "3", "hf://Qwen/Qwen2.5-0.5B-Instruct", REV, "production")
     with pytest.raises(ValueError):
         build_manifest(p, "svc", node_selector={"a": "b"})
+
+
+# D-0145: objective, budget and provisionOnEmpty (operator v0.10.0)
+import pytest as _pytest
+import importlib as _il
+_r = _il.import_module("bridge.render")
+
+
+def _promoted():
+    return PromotedModel("m", "1", "hf://X/Y", REV, "production")
+
+
+def test_objective_and_budget_on_both_kinds():
+    for kind in _r.KINDS:
+        s = _r.build_manifest(_promoted(), "s", kind=kind, ttft_seconds=1.0, budget_eur=500)["spec"]
+        assert s["objective"] == {"ttftSeconds": 1.0, "percentile": 95.0}
+        assert s["budget"] == {"eurPerMonth": 500}
+
+
+def test_unset_declaration_leaves_manifest_unchanged():
+    s = _r.build_manifest(_promoted(), "s", kind="FleetService")["spec"]
+    assert "objective" not in s and "budget" not in s and "nodePool" not in s
+
+
+def test_provision_on_empty_joins_the_selector():
+    s = _r.build_manifest(_promoted(), "s", kind="FleetService",
+                          node_selector={"k": "v"}, provision_on_empty=True)["spec"]
+    assert s["nodePool"] == {"selector": {"k": "v"}, "provisionOnEmpty": True}
+
+
+def test_provision_on_empty_and_bare_percentile_are_rejected():
+    with _pytest.raises(ValueError):
+        _r.build_manifest(_promoted(), "s", provision_on_empty=True)
+    with _pytest.raises(ValueError):
+        _r.build_manifest(_promoted(), "s", percentile=99)
